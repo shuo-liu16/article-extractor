@@ -140,43 +140,84 @@ def build_system_prompt(difficulty):
                     "extract data from reports",
                     "plant extracts used in medicine",
                 ],
+                "type": "word"
             },
             {
-                "word": "paradigm",
+                "word": "paradigm shift",
                 "pos": ".n",
-                "definition": "a typical example or pattern",
-                "definition-ch": "范式；典范（文中指研究模型）",
+                "definition": "a fundamental change in approach or underlying assumptions",
+                "definition-ch": "范式转换；根本性转变",
                 "common-usage": [
-                    "a new paradigm in physics",
-                    "shift the research paradigm",
+                    "the paradigm shift in technology",
+                    "scientific paradigm shift",
                 ],
+                "type": "phrase"
+            },
+            {
+                "word": "breakthrough",
+                "pos": ".n",
+                "definition": "an important discovery or development",
+                "definition-ch": "突破；重大发现",
+                "common-usage": [
+                    "scientific breakthrough",
+                    "technological breakthrough",
+                ],
+                "type": "word"
+            },
+            {
+                "word": "take into account",
+                "pos": ".v",
+                "definition": "to consider something when making a decision",
+                "definition-ch": "考虑；把...考虑在内",
+                "common-usage": [
+                    "take into account all factors",
+                    "must take into account the cost",
+                ],
+                "type": "phrase"
             },
         ]
     }
 
     return f"""
     ## 角色
-    你是专业的英语词汇分析助手，擅长从文本中提取值得注意的单词。
+    你是专业的英语词汇分析助手，擅长从文本中智能识别和提取值得注意的单词和词组。
     
     ## 任务
     1. 分析用户提供的英文文章
-    2. 筛选出符合要求的单词：{difficulty_desc}
-    3. 为每个单词提供：
-       - 词汇 (word): 单词或词组
+    2. 智能识别并提取符合要求的单词和词组：{difficulty_desc}
+    3. 为每个词汇项提供：
+       - 词汇 (word): 单词或词组（2-4个单词的常用搭配）
        - 词性 (pos): 使用缩写 (.n/.v/.adj/.adv/.prep/.conj/.pron等)
        - 中文释义 (definition-ch): 简洁准确
-       - 英文释义 (definition): 简洁准确，不超过10个单词
-       - 常见用法 (common-useage): 为了使我加深单词印象(1/2个例子)
+       - 英文释义 (definition): 简洁准确，不超过15个单词
+       - 常见用法 (common-usage): 为了加深印象(1-2个例子)
+       - 类型 (type): "word"表示单词，"phrase"表示词组
     
-    ## 筛选标准
+    ## 智能识别策略
+    ### 单词识别：
     - 优先选择：专业术语、学术词汇、生动表达、非常用词汇
     - 排除：超高频基础词汇 (the, a, is, etc.)
     - 排除：人名、地名等专有名词（除非有特殊含义）
     
+    ### 词组识别：
+    - 动词短语：take into account, come up with, look forward to, get along with
+    - 名词短语：paradigm shift, breakthrough discovery, cutting edge technology
+    - 形容词短语：well-known, state-of-the-art, up-to-date, user-friendly
+    - 介词短语：in terms of, with regard to, as a result of, in light of
+    - 习语和表达：idioms, phrasal verbs, collocations
+    - 学术表达：学术写作中常用的词组搭配
+    
+    ## 提取原则
+    1. 自动识别：根据文章内容自动判断是单词还是词组
+    2. 混合输出：单词和词组混合输出，比例为单词:词组 = 2:1
+    3. 质量优先：优先提取有学习价值的词汇，避免过于简单或过于复杂的词汇
+    4. 上下文相关：确保提取的词汇在文章中有实际意义
+    
     ## 输出格式
     {json.dumps(example_output, indent=4, ensure_ascii=False)}
     * 只包含JSON内容，不包含任何额外文本！
-    * 确保单词是原文中出现的实际拼写
+    * 确保单词和词组是原文中出现的实际拼写
+    * 智能混合输出单词和词组，无需用户指定
     """
 
 
@@ -211,6 +252,7 @@ def parse_vocabulary_response(response):
             # 确保可选字段存在
             item.setdefault("definition-ch", "暂无中文释义")
             item.setdefault("common-usage", [])
+            item.setdefault("type", "word")  # 默认为单词类型
 
             # 确保 common-usage 是列表
             if not isinstance(item["common-usage"], list):
@@ -219,21 +261,21 @@ def parse_vocabulary_response(response):
                 else:
                     item["common-usage"] = []
 
+            # 验证类型字段
+            if item["type"] not in ["word", "phrase"]:
+                item["type"] = "word"  # 默认为单词
+
             valid_vocab.append(item)
 
-        logger.debug(f"验证后保留 {len(valid_vocab)} 个有效词汇项")
+        logger.info(f"成功解析 {len(valid_vocab)} 个有效词汇项")
         return valid_vocab
 
     except json.JSONDecodeError as e:
-        logger.error(f"JSON解析失败: {str(e)}\n响应内容: {response[:200]}...")
-        return []
-    except KeyError as e:
-        logger.error(f"键值错误: {str(e)}\n响应内容: {response[:200]}...")
+        logger.error(f"JSON解析失败: {e}")
+        logger.debug(f"原始响应: {response[:500]}...")
         return []
     except Exception as e:
-        logger.error(
-            f"解析响应时出错: {str(e)}\n响应内容: {response[:200]}...", exc_info=True
-        )
+        logger.error(f"解析响应时发生未知错误: {e}")
         return []
 
 

@@ -33,6 +33,7 @@ function renderVocabularyList(vocabList) {
         const posName = getPosName(item.pos);
         const commonUsage = item['common-usage'] || [];
         const usageText = Array.isArray(commonUsage) ? commonUsage.join(' • ') : commonUsage;
+        const isPhrase = item.type === 'phrase';
         
         const card = `
         <div class="col-md-6 col-lg-4">
@@ -41,8 +42,11 @@ function renderVocabularyList(vocabList) {
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div class="flex-grow-1">
                             <h5 class="word-header card-title mb-1">${item.word}</h5>
-                            <span class="pos-badge badge me-2">${item.pos}</span>
-                            <small class="text-muted">${posName}</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="pos-badge badge">${item.pos}</span>
+                                <span class="badge ${isPhrase ? 'bg-warning' : 'bg-info'}">${isPhrase ? '词组' : '单词'}</span>
+                                <small class="text-muted">${posName}</small>
+                            </div>
                         </div>
                         <span class="badge bg-secondary">#${index + 1}</span>
                     </div>
@@ -86,19 +90,16 @@ function renderVocabularyList(vocabList) {
     });
 }
 
-// 显示加载状态
+// 显示加载动画
 function showLoading() {
-    console.log('显示加载状态');
+    console.log('显示加载动画');
     $('#loadingSpinner').addClass('show').show();
-    $('#resultCard').hide();
-    $('#extractForm button[type="submit"]').prop('disabled', true);
 }
 
-// 隐藏加载状态
+// 隐藏加载动画
 function hideLoading() {
-    console.log('隐藏加载状态');
+    console.log('隐藏加载动画');
     $('#loadingSpinner').removeClass('show').hide();
-    $('#extractForm button[type="submit"]').prop('disabled', false);
 }
 
 // 显示错误消息
@@ -137,7 +138,17 @@ function handleExtractVocabulary(article, difficulty) {
             currentVocabulary = response.vocabulary || [];
             
             // 更新结果计数
-            $('#resultCount').text(response.count + ' 个单词');
+            const wordCount = currentVocabulary.filter(item => item.type === 'word').length;
+            const phraseCount = currentVocabulary.filter(item => item.type === 'phrase').length;
+            let countText = '';
+            if (wordCount > 0 && phraseCount > 0) {
+                countText = `${wordCount} 个单词 + ${phraseCount} 个词组`;
+            } else if (wordCount > 0) {
+                countText = `${wordCount} 个单词`;
+            } else if (phraseCount > 0) {
+                countText = `${phraseCount} 个词组`;
+            }
+            $('#resultCount').text(countText);
             
             // 渲染词汇列表
             renderVocabularyList(currentVocabulary);
