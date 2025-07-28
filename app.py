@@ -2,7 +2,7 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify, send_file
 from dotenv import load_dotenv
-from extractor import extract_vocabulary
+from extractor import extract_by_paragraphs
 from utils.excel_export import export_vocab_to_excel
 
 # 加载环境变量
@@ -28,7 +28,7 @@ def extract_words():
             return jsonify({'error': '文章内容不能为空！'}), 400
         
         # 调用词汇提取函数
-        vocab_list = extract_vocabulary(article, difficulty)
+        vocab_list = extract_by_paragraphs(article, difficulty)
         
         return jsonify({
             'success': True,
